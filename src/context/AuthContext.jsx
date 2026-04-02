@@ -1,11 +1,8 @@
-import { createContext, useState, useEffect, useContext, useMemo } from 'react'; // 1. Import useMemo
+import { createContext, useState, useEffect, useContext, useMemo } from 'react'; 
 import { registerUser, loginUser, getMe } from '../api/auth';
 import ClipLoader from "react-spinners/ClipLoader";
 
 export const AuthContext = createContext();
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('authToken'));
@@ -21,7 +18,6 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           setToken(storedToken);
         } catch (error) {
-          console.error("Token validation failed, logging out.", error);
           localStorage.removeItem('authToken');
           setToken(null);
           setUser(null);
@@ -29,59 +25,42 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(false);
     };
-
     validateToken();
   }, []); 
 
   const registerAction = async (userData) => {
-    try {
-      const data = await registerUser(userData);
-      localStorage.setItem('authToken', data.token);
-      setToken(data.token);
-      const { token, ...userDataWithoutToken } = data;
-      setUser(userDataWithoutToken);
-      return data;
-    } catch (error) {
-        throw error;
-    }
+    const data = await registerUser(userData);
+    localStorage.setItem('authToken', data.token);
+    setToken(data.token);
+    const { token, ...userDataWithoutToken } = data;
+    setUser(userDataWithoutToken);
+    return data;
   };
 
   const loginAction = async (credentials) => {
-    try {
-      const data = await loginUser(credentials);
-      localStorage.setItem('authToken', data.token);
-      setToken(data.token);
-      const { token, ...userDataWithoutToken } = data;
-      setUser(userDataWithoutToken);
-      return data;
-    } catch (error) {
-        console.error("Error inside loginAction:", error);
-        throw error;
-    }
+    const data = await loginUser(credentials);
+    localStorage.setItem('authToken', data.token);
+    setToken(data.token);
+    const { token, ...userDataWithoutToken } = data;
+    setUser(userDataWithoutToken);
+    return data;
   };
 
   const logOut = () => {
     localStorage.removeItem('authToken');
     setToken(null);
     setUser(null);
-     };
+    window.location.href = '/login';
+  };
 
- 
   const authContextValue = useMemo(
-    () => ({
-      token,
-      user,
-      loading,
-      registerAction,
-      loginAction,
-      logOut,
-    }),
+    () => ({ token, user, loading, registerAction, loginAction, logOut }),
     [token, user, loading] 
   );
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#F3F5F9' }}>
         <ClipLoader color={"#3b82f6"} size={50} />
       </div>
     );
