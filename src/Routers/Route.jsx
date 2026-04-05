@@ -21,18 +21,7 @@ const router = createBrowserRouter([
     path: '/register',
     element: <Register/>,
   },
-  // {
-  //   path: '/feed',
-  //   element: <Feed/>,
-  // },
-  {
-    path: '/feed',
-    element: (
-      <ProtectedRoute>
-        <Feed/>
-      </ProtectedRoute>
-    ),
-  },
+
 ]);
 
 export default router;
