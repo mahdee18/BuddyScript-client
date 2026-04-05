@@ -7,7 +7,6 @@ import { BsThreeDots, BsGlobe, BsLockFill } from 'react-icons/bs';
 import { FiSend } from 'react-icons/fi';
 import { BiLike, BiMessageRounded } from 'react-icons/bi';
 import { RiShareForwardLine } from 'react-icons/ri';
-import LikersModal from '../post/LikersModal';
 
 const PostCard = ({ post, onPostDeleted }) => {
     const { user } = useAuth();
