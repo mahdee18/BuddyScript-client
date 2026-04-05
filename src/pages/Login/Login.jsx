@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import Swal from 'sweetalert2';
 import ClipLoader from "react-spinners/ClipLoader";
+import { BsExclamationTriangleFill } from 'react-icons/bs';
 
 import shape1 from '../../assets/images/shape1.svg';
 import shape2 from '../../assets/images/shape2.svg';
@@ -22,13 +23,16 @@ const BackgroundShapes = React.memo(() => (
 const LoginForm = () => {
     const [credentials, setCredentials] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
+    const [loginError, setLoginError] = useState(null); 
     const navigate = useNavigate();
     const { loginAction } = useAuth();
 
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setCredentials(prev => ({ ...prev, [name]: value }));
-    }, []);
+        
+        if (loginError) setLoginError(null); 
+    }, [loginError]);
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentials.email);
     const isPasswordValid = credentials.password.length >= 6; 
@@ -39,6 +43,8 @@ const LoginForm = () => {
         if (!isFormValid) return;
 
         setLoading(true);
+        setLoginError(null);
+
         try {
             const userData = await loginAction(credentials);
             await Swal.fire({
@@ -48,7 +54,7 @@ const LoginForm = () => {
             });
             navigate('/feed');
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Login Failed', text: err.message });
+            setLoginError(err.message);
         } finally {
             setLoading(false);
         }
@@ -58,6 +64,18 @@ const LoginForm = () => {
         <div className="w-full max-w-md mx-auto lg:mx-0 lg:max-w-none">
             <div className="px-6 py-10 bg-white rounded-xl shadow-2xl md:px-10">
                 <img src={logo} alt="Logo" className="mb-7" />
+                
+                {/* ── ATTENTION ALERT BOX ── */}
+                {loginError && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <BsExclamationTriangleFill className="text-red-500 mt-0.5 shrink-0" size={18} />
+                        <div>
+                            <h5 className="font-bold text-red-800 text-[15px]">Attention</h5>
+                            <p className="text-red-700 text-sm mt-1">{loginError}</p>
+                        </div>
+                    </div>
+                )}
+
                 <p className="mb-2 text-gray-500">Welcome back</p>
                 <h4 className="mb-10 text-4xl font-bold text-gray-800">Login to your account</h4>
                 
@@ -69,7 +87,7 @@ const LoginForm = () => {
                 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block mb-2 font-medium text-gray-700">Email</label>
+                        <label className="block mb-2 font-medium text-gray-700">Email address</label>
                         <input type="email" name="email" value={credentials.email} onChange={handleChange} required className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div className="mb-4">

@@ -7,6 +7,10 @@ import { BsThreeDots, BsGlobe, BsLockFill } from 'react-icons/bs';
 import { FiSend } from 'react-icons/fi';
 import { BiLike, BiMessageRounded } from 'react-icons/bi';
 import { RiShareForwardLine } from 'react-icons/ri';
+import LikersModal from '../post/LikersModal';
+import Comment from '../post/Comment';
+import PostOptionsMenu from '../post/PostOptionsMenu';
+import VisibilityModal from '../post/VisibilityModal';
 
 const PostCard = ({ post, onPostDeleted }) => {
     const { user } = useAuth();
@@ -67,7 +71,7 @@ const PostCard = ({ post, onPostDeleted }) => {
             }
         }
 
-        // 2. BACKEND CALL
+        // BACKEND CALL
         try { 
             await likePost(currentPost._id);
         } catch (error) {
