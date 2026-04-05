@@ -7,6 +7,7 @@ import { BsThreeDots, BsGlobe, BsLockFill } from 'react-icons/bs';
 import { FiSend } from 'react-icons/fi';
 import { BiLike, BiMessageRounded } from 'react-icons/bi';
 import { RiShareForwardLine } from 'react-icons/ri';
+
 import LikersModal from '../post/LikersModal';
 import Comment from '../post/Comment';
 import PostOptionsMenu from '../post/PostOptionsMenu';
@@ -33,18 +34,15 @@ const PostCard = ({ post, onPostDeleted }) => {
     const authorId = currentPost?.author?._id || currentPost?.author;
     const isAuthor = user?._id?.toString() === authorId?.toString();
 
-    // Check if user has liked the post
     const isLikedByCurrentUser = currentPost?.likes?.some(
         likeId => (likeId._id || likeId).toString() === user?._id?.toString()
     );
 
-    // Local state for the specific reaction type (Like, Love, Haha)
     const [userReaction, setUserReaction] = useState(isLikedByCurrentUser ? 'Like' : null);
-    const totalLikes = currentPost?.likes?.length || 0;
-
-    const totalCommentsAndReplies = currentPost.comments?.reduce((total, comment) => {
-        return total + 1 + (comment.replies?.length || 0);
-    }, 0) || 0;
+    
+    // Use integer count, fallback to array length for older posts
+    const totalLikes = currentPost?.likeCount ?? currentPost?.likes?.length ?? 0;
+    const totalCommentsAndReplies = currentPost?.commentCount ?? (currentPost.comments?.reduce((total, comment) => total + 1 + (comment.replies?.length || 0), 0) || 0);
 
     const handleVisibilityChange = async (newVisibility) => {
         const originalVisibility = currentPost.visibility;
@@ -58,16 +56,25 @@ const PostCard = ({ post, onPostDeleted }) => {
     const handleReactionClick = async (reactionType) => {
         if (!user) return;
         const originalLikes = currentPost.likes;
+        const originalLikeCount = totalLikes;
         const wasAlreadyLiked = isLikedByCurrentUser;
 
+        // Mathematically update the count
         if (userReaction === reactionType) {
             setUserReaction(null);
-            setCurrentPost(prev => ({ ...prev, likes: prev.likes.filter(l => (l._id || l).toString() !== user._id) }));
+            setCurrentPost(prev => ({ 
+                ...prev, 
+                likes: prev.likes.filter(l => (l._id || l).toString() !== user._id),
+                likeCount: Math.max(0, originalLikeCount - 1)
+            }));
         } else {
-            // Add/Change reaction
             setUserReaction(reactionType);
             if (!wasAlreadyLiked) {
-                setCurrentPost(prev => ({ ...prev, likes: [...prev.likes, { _id: user._id, firstName: user.firstName, profilePicture: user.profilePicture }] }));
+                setCurrentPost(prev => ({ 
+                    ...prev, 
+                    likes: [...prev.likes, { _id: user._id, firstName: user.firstName, profilePicture: user.profilePicture }],
+                    likeCount: originalLikeCount + 1
+                }));
             }
         }
 
@@ -76,19 +83,38 @@ const PostCard = ({ post, onPostDeleted }) => {
             await likePost(currentPost._id);
         } catch (error) {
             setUserReaction(wasAlreadyLiked ? 'Like' : null);
-            setCurrentPost(prev => ({ ...prev, likes: originalLikes }));
+            setCurrentPost(prev => ({ ...prev, likes: originalLikes, likeCount: originalLikeCount }));
         }
     };
 
     const handleCommentSubmit = async (e) => {
         e.preventDefault();
         if (!commentContent.trim() || !user) return;
+        
         const content = commentContent;
+        const tempId = `temp-${Date.now()}`;
+        
+        // Optimistic UI update
+        const optimisticComment = { _id: tempId, content, author: user, createdAt: new Date().toISOString(), likes: [], replies: [] };
+        setCurrentPost(prev => ({ 
+            ...prev, 
+            comments: [...(prev.comments || []), optimisticComment],
+            commentCount: (prev.commentCount || 0) + 1 
+        }));
         setCommentContent('');
+
         try {
             const updatedPost = await addComment(currentPost._id, content);
             setCurrentPost(updatedPost);
-        } catch (error) { console.error(error); }
+        } catch (error) { 
+            // Revert on failure
+            setCurrentPost(prev => ({
+                ...prev,
+                comments: (prev.comments || []).filter(c => c._id !== tempId),
+                commentCount: Math.max(0, (prev.commentCount || 0) - 1)
+            }));
+            console.error(error); 
+        }
     };
 
     const handleCommentUpdated = useCallback((updatedComment) => {
@@ -171,14 +197,12 @@ const PostCard = ({ post, onPostDeleted }) => {
                     <div className="relative group flex-1">
                         <div className="absolute bottom-1/2 left-0 w-full h-10 z-40 hidden group-hover:block"></div>
                         
-                        {/* THE REACTION POPUP */}
                         <div className="absolute bottom-full left-0 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-2xl border border-gray-100 z-50">
                             <button onClick={() => handleReactionClick('Like')} className="text-[30px] hover:scale-150 transition-transform origin-bottom">👍</button>
                             <button onClick={() => handleReactionClick('Love')} className="text-[30px] hover:scale-150 transition-transform origin-bottom">❤️</button>
                             <button onClick={() => handleReactionClick('Haha')} className="text-[30px] hover:scale-150 transition-transform origin-bottom">😆</button>
                         </div>
                         
-                        {/* MAIN BUTTON */}
                         <button 
                             onClick={() => handleReactionClick(userReaction || 'Like')}
                             className={`flex items-center justify-center w-full gap-2 py-2 font-semibold text-[15px] rounded-lg transition-colors

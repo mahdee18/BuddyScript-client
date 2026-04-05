@@ -23,7 +23,7 @@ const BackgroundShapes = React.memo(() => (
 const LoginForm = () => {
     const [credentials, setCredentials] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
-    const [loginError, setLoginError] = useState(null); 
+    const [loginError, setLoginError] = useState(null); // Tracks the backend error msg
     const navigate = useNavigate();
     const { loginAction } = useAuth();
 
@@ -31,6 +31,7 @@ const LoginForm = () => {
         const { name, value } = e.target;
         setCredentials(prev => ({ ...prev, [name]: value }));
         
+        // Hide the error alert box as soon as the user starts typing again
         if (loginError) setLoginError(null); 
     }, [loginError]);
 
@@ -43,7 +44,7 @@ const LoginForm = () => {
         if (!isFormValid) return;
 
         setLoading(true);
-        setLoginError(null);
+        setLoginError(null); // Reset before new attempt
 
         try {
             const userData = await loginAction(credentials);
@@ -54,6 +55,7 @@ const LoginForm = () => {
             });
             navigate('/feed');
         } catch (err) {
+            // Set the specific message from the backend to show in the UI
             setLoginError(err.message);
         } finally {
             setLoading(false);

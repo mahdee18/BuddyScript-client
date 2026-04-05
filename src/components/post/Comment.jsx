@@ -11,7 +11,6 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
 
-    // --- HELPER: GET AVATAR ---
     const getAvatar = (userData) => {
         if (userData?.profilePicture && userData.profilePicture !== '/default-avatar.png') {
             return userData.profilePicture;
@@ -24,19 +23,27 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
         likeId => (likeId._id || likeId).toString() === user?._id
     );
 
+    // Calculate total mathematically
+    const totalLikes = commentData?.likeCount ?? commentData?.likes?.length ?? 0;
+
     const handleCommentLikeToggle = async () => {
         if (!user) return;
         const originalLikes = commentData.likes || [];
+        const originalCount = totalLikes;
+        
         const newLikes = isLikedByCurrentUser
             ? originalLikes.filter(id => (id._id || id).toString() !== user._id)
             : [...originalLikes, user._id];
 
-        onCommentUpdated({ ...commentData, likes: newLikes });
+        // Use the new Counter Pattern
+        const newCount = isLikedByCurrentUser ? Math.max(0, originalCount - 1) : originalCount + 1;
+
+        onCommentUpdated({ ...commentData, likes: newLikes, likeCount: newCount });
 
         try {
             await likeComment(postId, commentData._id);
         } catch (error) {
-            onCommentUpdated({ ...commentData, likes: originalLikes });
+            onCommentUpdated({ ...commentData, likes: originalLikes, likeCount: originalCount });
         }
     };
 
@@ -49,7 +56,7 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
         const currentReplies = commentData.replies || [];
 
         const optimisticReply = {
-            _id: tempId, content, author: user, createdAt: new Date().toISOString(), likes: [],
+            _id: tempId, content, author: user, createdAt: new Date().toISOString(), likes: [], likeCount: 0
         };
 
         const optimisticCommentState = {
@@ -93,7 +100,6 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
     return (
         <div className="w-full mb-3">
             <div className="flex items-start space-x-2">
-                {/* Comment Author Avatar */}
                 <img 
                     src={getAvatar(commentData.author)} 
                     alt={commentData.author.firstName} 
@@ -109,12 +115,13 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
                             {commentData.content}
                         </p>
 
-                        {commentData.likes?.length > 0 && (
+                        {/* Render likeCount integer */}
+                        {totalLikes > 0 && (
                             <div onClick={() => onLikersClick({ commentId: commentData._id })} className="absolute -bottom-2 -right-3 flex items-center bg-white rounded-full p-[2px] shadow-sm px-1.5 cursor-pointer z-10 border border-gray-100">
                                 <div className="z-20 text-blue-500 bg-white rounded-full flex items-center justify-center">
                                     <FaThumbsUp className="text-[10px] m-[2px]" />
                                 </div>
-                                <span className="text-[11px] text-gray-600 ml-1 font-medium pr-0.5">{commentData.likes.length}</span>
+                                <span className="text-[11px] text-gray-600 ml-1 font-medium pr-0.5">{totalLikes}</span>
                             </div>
                         )}
                     </div>
@@ -128,7 +135,6 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
                 </div>
             </div>
 
-            {/* Replies List */}
             <div className="ml-11 mt-2 space-y-2">
                 {commentData.replies?.map(reply => (
                     <Reply 
@@ -142,14 +148,9 @@ const Comment = ({ postId, commentData, onCommentUpdated, onLikersClick }) => {
                 ))}
             </div>
 
-            {/* Reply Input Field */}
             {isReplying && (
                 <form onSubmit={handleAddReply} className="flex items-center w-full bg-[#f0f2f5] rounded-full px-2 py-1.5 mt-2 ml-10 max-w-[calc(100%-2.5rem)]">
-                    <img 
-                        src={getAvatar(user)} 
-                        alt="Your avatar" 
-                        className="w-6 h-6 rounded-full object-cover mr-2" 
-                    />
+                    <img src={getAvatar(user)} alt="Your avatar" className="w-6 h-6 rounded-full object-cover mr-2" />
                     <input type="text" value={replyContent} onChange={e => setReplyContent(e.target.value)} placeholder="Write a reply..." className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-[14px] placeholder-gray-500" />
                     <div className="flex items-center gap-2 pr-1 text-gray-400">
                         {replyContent.trim() && <button type="submit" className="text-blue-600"><FiSend size={16} /></button>}
